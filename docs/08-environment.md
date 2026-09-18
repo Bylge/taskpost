@@ -39,6 +39,17 @@ in full** against the new remote, not assumed to carry over (`06-build-plan.md`)
 **Compose runs backing services only** — `postgres` and `mailpit`. PHP, Artisan, the queue
 worker and Vite run natively in WSL2.
 
+**PostgreSQL is published on `127.0.0.1:55432`, not 5432** — decided 2026-09-18 at M1.4. A
+native Windows PostgreSQL service listens on `0.0.0.0:5432`, and Docker Desktop forwards
+published ports through Windows, so the canonical port cannot be bound from Compose at all;
+`up` fails outright rather than degrading. The alternative was stopping that Windows service,
+which was rejected because it belongs to the machine rather than to this project. `DB_PORT`
+carries the difference from M1.5, which is exactly what "configuration comes from the
+environment" is for: **CI is unaffected and keeps 5432**, because nothing hardcodes it. Both
+services bind to loopback only — nothing here is reachable from the LAN.
+
+Mailpit is on the defaults, `1025` for SMTP and `8025` for the web interface.
+
 **No cache or queue container until M8** — decided 2026-09-08. `CACHE_STORE=database` and
 `QUEUE_CONNECTION=database` until something actually dispatches a job or reads a cache,
 which is M8; the razor applied to infrastructure. When M8 needs one it is **Valkey**, not

@@ -180,6 +180,24 @@ SHAs: both HEADs resolve to the identical tree `0b38333`, and a content diff bet
 empty. Same bytes, different commit identity. The row is left as written — the discrepancy is
 an artefact of squash merging, not a defect in the move.
 
+**M1.4 passed on 2026-09-18.** `compose.yaml` runs `postgres` (18.6) and `mailpit` (v1.31.1),
+both with healthchecks, and both report healthy about six seconds after `docker compose up
+-d`. The persistence check was run with the committed file and no override: a row written
+through native PHP over `pdo_pgsql`, then `docker compose down`, then `up`, and the row read
+back with its original timestamp intact.
+
+**The PostgreSQL 18 volume path, proven both ways.** 18 stores its cluster in
+`/var/lib/postgresql/18/docker` and the image declares its `VOLUME` at the parent, so the
+named volume is mounted at `/var/lib/postgresql` — confirmed by `SHOW data_directory` inside
+the running container. The pre-18 convention, a volume at `/var/lib/postgresql/data`, was
+tried deliberately as a negative control: it **does not lose data quietly**, it refuses to
+boot, exiting 1 with an error pointing at `docker-library/postgres#1259`. That is worth
+recording precisely because the expectation going in was silent loss; the failure is loud,
+so this trap costs an error message rather than a database.
+
+**PostgreSQL is published on 55432, not 5432** — see `08-environment.md`, which owns the
+reason.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
