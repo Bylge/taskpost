@@ -166,6 +166,20 @@ wrong. The Docker Desktop WSL-integration toggle was the one item needing the ow
 was switched on for the `Ubuntu` distro; no interactive sudo turned out to be needed,
 because the toolchain was already installed.
 
+**M1.3 passed on 2026-09-18.** The clone lives at `~/code/taskpost`, `docs/private/` is
+present in it with both files byte-identical to the Windows originals, and the Windows copy
+was renamed to `Documents/GitHub/taskpost-windows-archived` rather than deleted. The session
+moved with it: this entry was written from the Linux clone.
+
+The table's first check asks for a log matching the Windows copy *commit for commit*, and
+that is no longer literally attainable — nor should it be. M1.1's ruleset allows squash as
+the only merge method, so PR #1 replaced the Windows-side `9e1167e` with `92a7f43` on `main`;
+the two histories diverge by SHA the moment anything merges. What the check was reaching for
+is that nothing was lost in the move, and that holds by stronger evidence than matching
+SHAs: both HEADs resolve to the identical tree `0b38333`, and a content diff between them is
+empty. Same bytes, different commit identity. The row is left as written — the discrepancy is
+an artefact of squash merging, not a defect in the move.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
