@@ -1,0 +1,379 @@
+# 06 — Build Plan
+
+The step-by-step sequence `04-scope.md` deferred. What gets built, in what order, and how we
+know a step is finished.
+
+**The plan ends at M9.** Nothing follows it, because what "finished" means is written down
+elsewhere and does not need a milestone of its own: `09-reference-scenario.md` describes one
+fifteen-person firm whose week the system must run end to end, and its eight-point list is
+what the last milestone is measured against. There is no go-live after M9 because there is
+nobody waiting for one.
+
+## Working a milestone
+
+Milestones are too big to be a unit of work. **The unit is a step**, and the execution rules
+for one are in `CLAUDE.md` — read those first; this section only defines the granularity.
+
+A step is: **one branch, one PR, one sitting, one check that either passes or doesn't.**
+Steps are numbered inside their milestone — `M2.1`, `M2.2` — and worked strictly in order.
+
+**Before a milestone starts, its step list is proposed and agreed.** Not invented while
+coding. A milestone whose steps cannot be listed in advance is not understood well enough
+to start, and that is information worth having before the first file is written.
+
+The milestone's exit criterion is checked once, after its last step. Individual steps do not
+get to claim the milestone is done.
+
+Example — M2 decomposed:
+
+| Step | Does | Check |
+|---|---|---|
+| M2.1 | `Tenant`, `User`, `Membership` migrations, models, factories | Factories build a full tenant in one line |
+| M2.2 | `BelongsToTenant` trait, global scope, `TenantContext` | Scope applies without an explicit `where` |
+| M2.3 | Tenant resolved from the actor's active membership; refusal when there is none | An actor with no active membership in the tenant is refused, not handed an empty list |
+| M2.4 | Isolation test helper, plus the isolation test for `Membership` — the only tenant-owned model at M2 | Every tenant-owned model has a passing isolation test |
+
+Four steps, four PRs, four days of small green diffs — instead of one branch that touches
+everything and is impossible to review or revert.
+
+## Rules for the plan itself
+
+1. **A milestone is done when its exit criterion passes.** No partial credit, no "mostly
+   M3". Half-finished milestones are how the foundations rot.
+2. **Tests ship with the milestone, not after it.** The four categories in
+   `03-architecture.md` apply to every milestone that touches a model or an Action.
+3. **The API is not a milestone.** Every Action gets its endpoint in the same milestone the
+   Action is written — that is what "two doors, one room" costs. M9 is only the parts that
+   have no Action behind them: auth, pagination, error shape.
+4. **Nothing from "out of MVP" enters without a recorded decision** in `05-open-questions.md`.
+5. Sizes are relative (S/M/L), not dates, and there are no dates to hold —
+   `04-scope.md` sets that policy. A size exists so that a milestone doubling it is
+   noticeable, which is a trigger at the bottom of this file, not a schedule to defend.
+
+---
+
+# Phase 1 — Foundations
+
+`01-principles.md` §2 — these four cannot be retrofitted. Nothing in Phase 2 starts until
+Phase 1 is complete, because everything in Phase 2 is cheap afterwards and unfixable before.
+
+## M1 — Walking skeleton · M
+
+Fresh Laravel, PHP 8.5, PostgreSQL, Pest, Filament installed. CI running the suite on every
+pull request, and a red build that actually blocks the merge.
+
+**Dependency floor**, re-verified 2026-09-08 — Laravel 13, PHP 8.5, Filament 5, Livewire 4,
+Pest 5, plus Sanctum, Pint, Larastan. Filament 5 requires Livewire 4; the two move together,
+and Livewire arrives transitively with Filament rather than as a separate require.
+
+Re-verify all of it at install and **record the resolved versions here**. Do not take a
+version number from an agent's memory, including mine — this list was wrong within three
+months of being written, which is exactly why the rule exists. Nothing else added without a
+reason written down; see the packages we deliberately skip in `03-architecture.md`.
+
+If PHP 8.5 blocks a package at install, drop to 8.4 and record why. Not 8.3 — though the
+mechanism is softer than first recorded: Laravel 13 declares `php ^8.3` and its `symfony/*`
+constraints all read `^7.4 || ^8.0`, so 8.3 resolves the older Symfony 7.4 line silently
+rather than failing. The reason to be on 8.5 is support dates, not a hard floor
+(`CLAUDE.md`).
+
+PHP 8.5 is not in stock Ubuntu 24.04, which tops out at 8.3. It comes from `ppa:ondrej/php`.
+Two package-level traps, both verified: `php8.5-opcache` **does not exist** — OPcache is
+compiled into the core packages and naming it aborts the whole apt transaction — and
+`ext-intl` is a hard `composer require` of `filament/support` that appears on neither
+Laravel's nor Filament's stated requirements list.
+
+**CI and local both run PostgreSQL, never SQLite.** The tempting in-memory shortcut diverges
+from production on exactly the three things this system leans on: global scopes over JSON
+columns, `SELECT … FOR UPDATE` behind task numbering, and constraint timing. A green suite
+that proves nothing about production is worse than a slow one.
+
+### What M1 owes a future that is not scheduled
+
+**Deployment is unscheduled — a dated departure from the deployable-from-day-one principle
+(`01-principles.md`), taken 2026-09-18 and recorded rather than glossed.** There is no host,
+no VPS, no CD workflow and no paid service of any kind; the system runs locally and nowhere
+else. The reason is not laziness about ops: a monthly bill on a free-time project converts
+"no deadline" into a deadline, which is precisely the pressure this project exists without.
+What the departure costs is that the first deploy, whenever it happens, will be a cold one
+with no rehearsal behind it.
+
+That cost is bounded by four things M1 does anyway, because each is free now and expensive
+to retrofit:
+
+| M1 does | So that later |
+|---|---|
+| Configuration comes from the environment, never a hardcoded path | A second environment is a file, not a refactor |
+| The schema lives entirely in migrations | A fresh database is one command anywhere |
+| The `/up` health route exists from the skeleton onward | Any deploy or monitor has something to ask |
+| Nothing assumes the application runs on a laptop | Paths, hostnames and ports are configuration, not assumptions |
+
+The expensive thing to retrofit is an application shaped around one developer's machine. A
+CD workflow is a day's work against an application already shaped for it, which is why the
+workflow is the part that waits and the shape is the part that does not.
+
+Local setup and the four CI jobs are specified in `08-environment.md`; `composer check` and
+the definition of done in `07-conventions.md`. M1 is where both stop being documents and
+start being enforced. **The repo moves into the WSL2 filesystem here** — doing that once
+branches are in flight is needless friction.
+
+**Exit:** all four CI jobs green on a pull request, and a deliberately failing test turns the
+build red *and* leaves the pull request unmergeable. No live-URL clause, because nothing is
+deployed.
+
+### Steps — agreed 2026-09-08, re-based on the `taskpost` repository 2026-09-18
+
+| Step | Does | Check |
+|---|---|---|
+| M1.1 | Repository public + all-rights-reserved `LICENSE`; ruleset on `main` requiring a pull request | A direct push to `main` is **rejected**, and `gh api repos/Bylge/taskpost/rulesets` returns one `active` ruleset |
+| M1.2 | WSL toolchain: PHP 8.5 + extensions, Composer, Node 24, git, gh, Docker | One chained command reports PHP 8.5, every required extension, and a reachable `docker` |
+| M1.3 | Repo re-cloned into `~/code/taskpost`; gitignored `docs/private/` copied across by hand; Windows copy archived; session moves | `git -C ~/code/taskpost log --oneline` matches the Windows copy commit for commit; `docs/private/` is present in the clone; the Windows copy is renamed, not deleted |
+| M1.4 | Compose: `postgres` and `mailpit`, with the PostgreSQL 18 volume path proven | `docker compose up -d` reports healthy, and a row survives `down` then `up` |
+| M1.5 | Laravel 13 skeleton on PostgreSQL with Pest 5; SQLite eradicated | `artisan migrate` succeeds against `pgsql` and no `sqlite` reference survives anywhere |
+| M1.6 | The gate: `pint.json`, `phpstan.neon`, `composer check` | `composer check` exits 0 from a clean tree and leaves it clean |
+| M1.7 | Filament 5 installed as a package — no panel, no resources | `composer show --locked filament/filament` reports 5.x and `artisan about` exits 0 |
+| M1.8 | Frontend toolchain and first asset build | `npm ci && npm run build` produces `public/build/manifest.json` |
+| M1.9 | Resolved versions recorded back into this file | A script asserts every version recorded here matches the lockfiles |
+| M1.10 | CI: `lint`, `static`, `test` against a PostgreSQL service container, then added to the ruleset as required checks | Those three jobs conclude `success` on a pull request, and the ruleset lists all three |
+| M1.11 | CI: `i18n` — `en`/`pl` key parity, added as the fourth required check, red path proven | Four jobs green and all four required; a deliberately unpaired key turns `i18n` red, then is reverted |
+| M1.12 | Exit proof: red blocks the merge | A failing test leaves the PR unmergeable; removing it makes it mergeable |
+
+Twelve steps, worked in order.
+
+**M1.1 is re-run from scratch on 2026-09-18.** It passed once already, against the previous
+repository; that repository is being deleted and recreated rather than rewritten, because
+its git history carried material that belongs in `docs/private/` and force-pushing does not
+make a published commit unreachable by SHA. The step is therefore not "already done": the
+`LICENSE`, the ruleset and the rejected-direct-push proof are all redone against
+`Bylge/taskpost` and re-recorded. Nothing else in the table changes.
+
+**Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
+requires a check no workflow produces leaves every pull request permanently unmergeable —
+M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
+and each check becomes required in the step that creates the job behind it. The gating is not
+weakened and does not slip out of the milestone; it is attached to the thing it gates. M1.12
+proves the whole mechanism, which is where the exit criterion is actually met.
+
+**Public, not paid.** Merge gating needs rulesets, which are free on a public repository and
+a paid feature on a private one. The repository is public under an all-rights-reserved
+`LICENSE` — readable, not open source, and no commercial right is granted. Everything that
+must not be published lives in `docs/private/`, which is gitignored and never travels with a
+clone. The side benefits are unlimited Actions minutes and secret-scanning push protection,
+both of which this plan leans on.
+
+M1.2 still needs things only the owner can supply: a sudo password typed interactively, and
+the Docker Desktop WSL-integration toggle.
+
+## M2 — Tenancy and identity · M
+
+`Tenant`, `User`, `Membership`. The `BelongsToTenant` trait: global scope plus `tenant_id`
+auto-fill. **The tenant resolves from the actor's active membership, not from the host** —
+subdomain routing is unscheduled, so there is no wildcard DNS, no hosts-file enumeration and
+no per-host session rule to get right here. Factories that make a second tenant free to
+create, because otherwise nobody writes the isolation tests.
+
+**M2 dropped from L to M on 2026-09-18**, and subdomain resolution was most of the weight
+that left. What replaces it is smaller and stricter: an inactive membership resolves nothing,
+and no Action may act on a tenant the actor holds no active membership in
+(`02-domain.md`).
+
+**Exit:** two tenants exist with overlapping data; the isolation test for every tenant-owned
+model passes; no Action reaches a tenant the actor holds no active membership in.
+
+## M3 — Permissions and the workspace shell · M
+
+The fixed permission catalogue in code. `Role` as a tenant-owned bundle, three defaults —
+Member, Agent, Admin — seeded on tenant creation. `Membership::hasPermission()` as the single
+check everything reads. Visibility scope (`own` / `all`) applied at query level, because it
+is the axis that separates a junior from a manager now that there is one surface.
+
+**One shell, not three.** A single Filament workspace panel served at `/`, using Filament's
+own login (`03-architecture.md`). Empty of resources at this point — M3 builds the two
+mechanisms the shell will gate with, the permission check behind Filament's
+navigation-visibility and page-authorization hooks and the visibility-scope query object; M5
+puts the first resource in it, which is the first thing either mechanism has to act on.
+
+`php artisan tenant:create` lands here too, taking its arguments explicitly. It is the only
+way a tenant comes into existence, which is why the super-admin panel has nothing left to do.
+
+**Exit:** `Membership::hasPermission()` answers the fixed catalogue correctly for a
+membership built from each of the three default roles; the panel at `/` admits an actor
+holding an active membership and refuses everyone else; `tenant:create` builds a working
+tenant with its three default roles from the CLI.
+
+The two clauses that need a surface are checked where that surface arrives, not here — scope
+`own` against tasks at M5, and the gated settings entry at M7. M3 is done when the mechanisms
+exist and are unit-tested; nothing is stubbed early to make a screen-level check runnable a
+milestone ahead of the screen (`01-principles.md` §1).
+
+## M4 — Internationalisation · S
+
+`en` and `pl` translation files, per-user locale and timezone, UTC storage, locale-aware
+date formatting decided once. A check in CI that fails on literal user-facing strings in
+Blade.
+
+Small, and permanently expensive to skip — `01-principles.md` §2.
+
+**Exit:** the entire Phase 1 skeleton renders in both languages with no literal strings, and
+the CI check catches a deliberately hardcoded one.
+
+---
+
+# Phase 2 — Product
+
+## M5 — First vertical slice — `CreateTask` · M
+
+`CreateTask` end to end: workspace form → Action → task with an allocated number → visible in
+the list. Plus the `POST /api/v1/tasks` endpoint calling the same Action. Status, priority,
+category and type dictionaries seeded with defaults.
+
+This milestone's real output is **the pattern** — Action contract, authorization split,
+`Activity` write, transaction boundary, test shape. Every later Action copies it, so it is
+worth getting slowly right.
+
+Numbering is the part to get right first, not last: `SELECT … FOR UPDATE` on
+`tenants.next_task_number` inside the insert's transaction, with the unique
+`(tenant_id, number)` constraint as the backstop (`02-domain.md`). Two people filing at once
+is not a rare event in a system whose whole pitch is that everyone files in one place.
+
+**Exit:** a task created through the workspace and one created through the API are
+indistinguishable in the database; a membership with scope `own` sees only tasks it filed or
+is assigned to in the workspace list, and a colleague's task is absent from the query, not
+merely hidden in the view. All four test categories exist for this slice.
+
+## M6 — Task lifecycle · L
+
+`PostComment` (public comment and internal note), `AssignTask`, `TakeTask`, `ChangeStatus`,
+`SetDueDate`, `UpdateTask`. The `Activity` timeline. Attachments through the authorized
+controller route. Endpoints alongside, in the same milestone as the Actions.
+
+The largest milestone and the one carrying the system's most important correctness property.
+It also carries the three rules that fire on their own: `first_responded_at` set once by the
+first public comment from someone who is not the requester; `closed_at` set by `ChangeStatus`
+on entry to a `done` or `cancelled` status and cleared on leaving one, so closure is a column
+rather than something reconstructed from the timeline; and the reopen rule — a public comment
+from the requester on a task whose status type is `done` moves it to the tenant's
+`is_default_open` status and clears `closed_at`, while status type `cancelled` does not reopen
+(`09-reference-scenario.md`, situations 4 and 6).
+
+**Exit:** the internal-comment leak test passes at query level, not view level — a membership
+with scope `all` and no `task.note` fetching a task through both the workspace and the API
+receives zero internal comments. Full lifecycle drivable from either door.
+
+## M7 — Configuration · M
+
+Dictionary CRUD with the lifecycle rules from `02-domain.md` — hard delete only while nothing
+references the row, `active = false` forever after — plus role CRUD, user invitations and
+tenant settings. Filament, mostly. The one guard that is not CRUD: a tenant must always keep
+at least one active membership holding `users.manage`.
+
+**Exit:** an office manager sets up a tenant from scratch — statuses mapped to fixed types,
+priorities, categories, types, roles, and the people with their visibility scopes — without a
+developer and without a seeder; and a membership without `settings.manage` has no settings
+entry in the navigation and cannot reach the route by typing it either.
+
+## M8 — Notifications · M
+
+Queue worker and scheduler, run locally. Two notifications: assigned to me, new comment on a
+task I filed. Per-user on/off.
+
+**The mail-provider dependency is discharged, 2026-09-18.** This milestone previously waited
+on the choice of a transactional provider; with no host and no real recipients, it needs a
+mailer that reaches Mailpit and nothing more. A real provider, with SPF and DKIM on a real
+domain, is on the unscheduled list below and is not a prerequisite for anything in this plan.
+
+What M8 must get right is not delivery but context: a job carries its tenant in the payload
+and the context is torn down between jobs, so a queued notification cannot leak across a
+boundary the request-time global scope was protecting (`03-architecture.md`).
+
+**Exit:** both emails land in Mailpit, dispatched after commit, with the right tenant inside
+the job. The whole exit is satisfiable on the machine that runs the milestone, which rule 1
+requires and the previous version of this milestone did not have.
+
+## M9 — API surface and finding work · M
+
+Sanctum tenant-scoped tokens, cursor pagination, the error shape, rate limits. Task list
+filters and search in the workspace — by number, by text in `subject`, by status type, by
+`due_at` this week.
+
+**Exit:** the full lifecycle from M6 drivable by `curl` alone, against a documented
+`/api/v1`. A three-month-old task is found in under ten seconds by someone who remembers only
+a customer's surname or a number (`09-reference-scenario.md`, "what done means" point 8).
+
+---
+
+## Deleted milestones
+
+**Milestone numbers are identity.** They are cited from other docs and from git history, so
+they are never renumbered and never reused. The three below were removed on 2026-09-18 when
+the project pivoted; the gaps in the sequence stay, and this section is why they are there.
+M2 through M9 keep the numbers they had.
+
+| Milestone | Was | Deleted | Why |
+|---|---|---|---|
+| **M0** | Ground truth — observe a real firm's workflow | 2026-09-18 | There is no firm to observe. The question it existed to answer is now answered by `09-reference-scenario.md`, an invented firm rather than an observed one |
+| **M10** | Hardening and go-live | 2026-09-18 | No host to harden and no go-live. Backups, restore rehearsal, error tracking and uptime monitoring move to the unscheduled list, where each waits on a host existing |
+| **M11** | Deployment | 2026-09-18 | Deployment is unscheduled — see the dated departure under M1. The ordering note that said M11 ran before M10 goes with it |
+
+**What M0's deletion costs, stated plainly.** The domain model now rests on an invented
+scenario rather than on a workflow anybody described from their own week, and an invented one
+agrees with you where a described one surprises you. That is recorded as the project's top
+open risk in `05-open-questions.md` and as a caveat inside `09-reference-scenario.md` itself.
+It is not resolved by anything in this plan — only by somebody real using the system, which
+is the first trigger below.
+
+**What M10's deletion costs:** nothing is backed up and nothing is watched, which is correct
+while the only data is local seed data and wrong the moment it is not. The trigger for that
+is also below.
+
+## Unscheduled
+
+Each of these is a real thing that may one day be built, and none of them has a milestone,
+a size or a position in the order. They are listed so that "not now" is a recorded state
+rather than an oversight.
+
+| Unscheduled | Waiting on |
+|---|---|
+| Deployment and CD | A reason to pay for a host — see M1's dated departure |
+| A real transactional mail provider | A recipient who is not Mailpit |
+| Subdomain routing | A second tenant that is real rather than a fixture |
+| The super-admin panel | Something for it to do that `tenant:create` does not already do |
+| Task deletion (`task.delete`) | An Admin holding a task that should never have existed. The permission ships at M3; the operation does not, and no Action, route or endpoint implements it (`02-domain.md`) |
+| Backups, restore rehearsal, monitoring | Data that would hurt to lose, which means a host |
+| Projects / containers | The nullable `project_id` column filling with something. The column is bought; the feature is not (`02-domain.md`) |
+| Calendar | A date that a filter failed to catch |
+| Checklists | Work with steps that somebody actually forgets |
+| Announcements | A message that is not about one task |
+| Email intake | A firm whose work arrives by email |
+| SLA | A promise that can be breached |
+| Reports | A number somebody would act on differently |
+| Custom fields | A fifth axis with a name |
+| 2FA | An account worth attacking |
+
+**The standing rule for everything on this list: no stub, no placeholder file, no config
+flag, no abstraction and no "just in case" column before its milestone starts.** This is the
+razor (`01-principles.md` §1) applied to execution rather than to features, and the failure
+it prevents is the one where half a feature exists, is untested, is never finished, and is
+still in the way two years later. The three cheap seams in `04-scope.md` are the whole of the
+exception, they were each argued for individually, and the list is closed.
+
+## Triggers to stop and re-plan
+
+- **A real firm sees the system and the reference scenario turns out to be wrong.** This is
+  the expected outcome, not the surprising one — `09-reference-scenario.md` was invented by
+  the person who wanted the features in it. Re-plan before the next milestone begins, not
+  mid-step, and revise the scenario before revising the plan: the plan is downstream of it.
+- **Any milestone doubles its size estimate.** Cut scope inside it rather than let it run;
+  that is the razor applied to work rather than features. If the cut is not possible, the
+  milestone was mis-decomposed and its step list is re-agreed out loud before more code.
+- **Somebody actually wants to use it.** Deployment stops being unscheduled and becomes
+  urgent, and M10's deleted contents — backups, a tested restore, monitoring — come back with
+  it. The monthly bill is worth paying at the moment there is a user, and not one day before.
+- **A second tenant becomes real.** Membership-based resolution was chosen because one tenant
+  cannot tell the difference (M2). Two real tenants, especially two that want their own
+  hostname, brings subdomain routing back as a decision with a reason rather than as
+  architecture bought in advance.
+- **A rule wants to branch on `type_id`.** `Type` is decorative by decision
+  (`02-domain.md`); the first piece of logic that wants to read it is the tell that the
+  fixed-semantics layer has earned its place. Additive in schema, but a decision to record
+  rather than a change to slip into a step.

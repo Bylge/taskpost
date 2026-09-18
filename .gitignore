@@ -1,0 +1,13 @@
+# `.env` is never in git — 08-environment.md
+.env
+.env.*
+!.env.example
+
+# OS noise
+Thumbs.db
+.DS_Store
+
+# Commercial and legal notes. Kept out of git so the repository can be public from M1.1
+# without a rewrite, for merge gating (06-build-plan.md).
+# Still read by agents locally; see docs/private/README.md.
+docs/private/
