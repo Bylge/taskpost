@@ -147,6 +147,25 @@ make a published commit unreachable by SHA. The step is therefore not "already d
 `LICENSE`, the ruleset and the rejected-direct-push proof are all redone against
 `Bylge/taskpost` and re-recorded. Nothing else in the table changes.
 
+**M1.1 passed on 2026-09-18**, both halves proved rather than reasoned about. Ruleset:
+`gh api repos/Bylge/taskpost/rulesets` returns exactly one entry, `enforcement: active`,
+scoped to `~DEFAULT_BRANCH`, carrying `pull_request` (squash the only allowed merge method),
+`non_fast_forward` and `deletion`, with `bypass_actors: []` and `current_user_can_bypass:
+"never"` — nobody, including the owner, holds an exemption. Rejected push: an empty commit
+pushed to `main` was declined with `GH013: Repository rule violations found` / *Changes must
+be made through a pull request*, and discarded locally afterwards, leaving `main` level with
+`origin/main`. A clean tree pushes as a no-op and proves nothing, which is why the proof
+needs a throwaway commit.
+
+**M1.2 passed on 2026-09-18.** Resolved on Ubuntu 24.04.1 under WSL2: PHP 8.5.10 CLI from
+`ondrej-ubuntu-php-noble`, Composer 2.10.3, Node v24.21.0, gh 2.100.0, git 2.43.0, Docker
+29.6.2 reachable through Docker Desktop's WSL integration. `intl` and `pdo_pgsql` are both
+present, and OPcache is compiled in as this milestone's notes predicted — it reports as
+`Zend OPcache`, so a check grepping for a bare `opcache` line will call it missing and be
+wrong. The Docker Desktop WSL-integration toggle was the one item needing the owner, and
+was switched on for the `Ubuntu` distro; no interactive sudo turned out to be needed,
+because the toolchain was already installed.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
