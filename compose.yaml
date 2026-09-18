@@ -1,0 +1,46 @@
+# Local backing services only — PHP, Artisan, the queue worker and Vite run natively
+# in WSL2 (08-environment.md). No cache or queue container until M8.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: taskpost
+      POSTGRES_USER: taskpost
+      # Local-only development credentials. Nothing here reaches an environment that
+      # is reachable from outside this machine; the port is bound to loopback below.
+      POSTGRES_PASSWORD: taskpost
+    ports:
+      # 55432, not 5432: a native Windows PostgreSQL service holds 5432 machine-wide,
+      # and Docker Desktop forwards through Windows, so the canonical port cannot be
+      # published here. Bound to loopback — nothing on the LAN reaches this.
+      - '127.0.0.1:55432:5432'
+    volumes:
+      # PostgreSQL 18 keeps its data in /var/lib/postgresql/18/docker, not the
+      # pre-18 /var/lib/postgresql/data, and the image declares its VOLUME at the
+      # parent. Mount the parent. Mounting the old path does not fail quietly:
+      # the entrypoint detects it and refuses to boot with exit code 1, pointing
+      # at docker-library/postgres#1259. Verified at M1.4 rather than assumed.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U taskpost -d taskpost']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
