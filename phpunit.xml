@@ -4,10 +4,10 @@
          bootstrap="vendor/autoload.php"
          colors="true"
 >
-    <!-- There is no Unit suite yet. Git does not track an empty directory, so a suite
-         pointing at one PHPUnit cannot find fails the whole run on a fresh clone. The
-         entry comes back with the first test that belongs in it (07-conventions.md). -->
     <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>

@@ -88,6 +88,52 @@ from production on exactly the three things this system leans on: global scopes 
 columns, `SELECT … FOR UPDATE` behind task numbering, and constraint timing. A green suite
 that proves nothing about production is worse than a slow one.
 
+### Resolved versions — recorded 2026-09-20 at M1.9
+
+What the stack resolved to, not what was planned. **The table is checked by a test** —
+`tests/Unit/RecordedVersionsTest.php` parses it and compares every row against the file named
+in its last column, so a version that drifts fails `composer check`. That is what makes this a
+record rather than a claim: the dependency floor above was wrong within three months of being
+written, which is the whole reason the re-verify rule exists.
+
+The comment markers around the table are load-bearing. The test reads between them, and the
+row format — three backtick-quoted cells — is what it matches.
+
+<!-- resolved-versions:start -->
+
+| Name | Recorded | Source |
+|---|---|---|
+| `php` | `^8.5` | `composer.json` |
+| `laravel/framework` | `v13.32.0` | `composer.lock` |
+| `laravel/tinker` | `v3.0.2` | `composer.lock` |
+| `filament/filament` | `v5.8.2` | `composer.lock` |
+| `livewire/livewire` | `v4.4.5` | `composer.lock` |
+| `pestphp/pest` | `v5.2.1` | `composer.lock` |
+| `pestphp/pest-plugin-laravel` | `v5.0.1` | `composer.lock` |
+| `phpunit/phpunit` | `13.3.4` | `composer.lock` |
+| `larastan/larastan` | `v3.12.2` | `composer.lock` |
+| `phpstan/phpstan` | `2.2.14` | `composer.lock` |
+| `laravel/pint` | `v1.32.1` | `composer.lock` |
+| `vite` | `8.3.0` | `package-lock.json` |
+| `tailwindcss` | `4.3.3` | `package-lock.json` |
+| `@tailwindcss/vite` | `4.3.3` | `package-lock.json` |
+| `laravel-vite-plugin` | `3.2.0` | `package-lock.json` |
+
+<!-- resolved-versions:end -->
+
+The interpreter these were resolved on is **PHP 8.5.10**, with Composer 2.10.3, Node v24.21.0
+and npm 11.19.0 (M1.2, M1.8).
+
+**`php` is a constraint rather than a resolved version**, because no lockfile records the
+interpreter the code ran on. It is checked against `composer.json`, and a second test asserts
+the running interpreter falls inside it — which is what actually prevents the silent 8.3
+resolution `CLAUDE.md` describes, rather than a sentence asking people not to do it. Raised
+here from the skeleton's `^8.3`, closing issue #6.
+
+**Sanctum is absent deliberately.** The dependency floor names it, but it arrives at M9 with
+the API surface. Nothing is recorded for a package that is not installed, because a recorded
+version nobody can check is the thing this section exists to stop.
+
 ### What M1 owes a future that is not scheduled
 
 **Deployment is unscheduled — a dated departure from the deployable-from-day-one principle
@@ -319,6 +365,31 @@ view is written to tolerate their absence.
 need the optional `fontaine` package. Adding a dependency to improve layout shift on a welcome
 page that M3 deletes fails the razor, and `optimizedFallbacks: false` would edit a config file
 this step scoped out. Left as it is, to be decided at M3, when fonts first matter to anybody.
+
+**M1.9 passed on 2026-09-20.** The resolved versions are recorded above and checked by
+`tests/Unit/RecordedVersionsTest.php`, which runs inside `composer check` and will run inside
+M1.10's `test` job with no extra wiring. Three red paths were proved rather than reasoned
+about: a drifted version fails with the package named beside its real version, a package
+recorded but not installed fails as `(absent)`, and removing a marker fails with a
+`RuntimeException` naming the file. Each was reverted.
+
+**The `Unit` suite is back in `phpunit.xml`**, which M1.6 said would happen in the same commit
+as the first test that belongs in it. This is that test — it reads files and touches no
+database, which is exactly what `07-conventions.md` reserves `tests/Unit` for.
+
+**Issue #6 closes here.** `composer.json` required `php: ^8.3`, inherited from the skeleton,
+while both `CLAUDE.md` and this file had decided 8.5. `composer update --lock` raised the
+platform requirement and moved nothing: 163 packages before, 163 after, every version
+identical. The decision is now enforced by Composer instead of held by convention, and the
+test asserts the running interpreter falls inside the constraint rather than merely that the
+constraint exists.
+
+**A record is only as good as what it covers, and covering everything is how records die.**
+The table lists the stack-defining packages, not all 163 in the lockfiles — recording a
+transitive dependency nobody chose would turn every routine `composer update` into a
+documentation edit, and a document that must be edited for changes nobody made is a document
+that stops being edited. What is in: everything the dependency floor names, plus the tools
+`composer check` runs.
 
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
