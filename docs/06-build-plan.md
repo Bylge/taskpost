@@ -294,6 +294,32 @@ Production packages went from 76 to 109. The other thirty-odd are what Filament 
 still declares `php: ^8.3` from the skeleton while this project has decided on 8.5, which is
 issue #6 against M1.9.
 
+**M1.8 passed on 2026-09-20.** `npm ci && npm run build`, from a wiped `node_modules`,
+produces `public/build/manifest.json` — Node v24.21.0, npm 11.19.0, Vite 8.3.0, Tailwind 4,
+92 packages audited, 0 vulnerabilities. The skeleton ships **no** `package-lock.json`, and
+`npm ci` refuses to run without one, so the lockfile was generated and committed; that is the
+whole of what this step adds to the repository. Build output stays gitignored.
+
+**The asset build makes network calls.** `vite.config.js` uses the `bunny()` font helper, so
+the build downloads Instrument Sans from `fonts.bunny.net` and emits the woff and woff2 files
+into `public/build/assets/`. A runner with no outbound network, or a bunny.net outage, fails
+the build outright rather than degrading. Recorded here because M1.10 is the step that would
+otherwise find out the hard way.
+
+**A missing manifest does not break the welcome page — and that is not a general property.**
+Laravel 13's `welcome.blade.php` guards its own call,
+`@if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))`,
+and inlines a prebuilt Tailwind stylesheet otherwise. That is why `/` answered 200 at M1.5
+with nothing built, and it is a property of that one view rather than of Blade. Any view
+calling `@vite` **without** that guard throws when the manifest is absent, so the first such
+view — the panel layout at M3 — is where the `test` job either builds assets first or the
+view is written to tolerate their absence.
+
+**One build warning is left standing.** `laravel:fonts` reports that optimised font fallbacks
+need the optional `fontaine` package. Adding a dependency to improve layout shift on a welcome
+page that M3 deletes fails the razor, and `optimizedFallbacks: false` would edit a config file
+this step scoped out. Left as it is, to be decided at M3, when fonts first matter to anybody.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
