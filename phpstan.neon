@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/pestphp/pest/phpstan-pest-extension.neon
+
+parameters:
+    # Level max, no baseline (07-conventions.md). A greenfield project that generates a
+    # baseline on day one has a baseline forever.
+    level: max
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests

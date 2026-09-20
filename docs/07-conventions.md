@@ -118,6 +118,10 @@ The four mandatory categories are in `03-architecture.md`. These are the mechani
   writes
 - **A shared helper asserts scoping** so per-model isolation tests stay one-liners
 - **Names describe behaviour:** `it('refuses to assign a task without task.assign')`
+- **`Pest\Laravel\get()`, never `$this->get()`.** Inside a Pest closure `$this` is bound to
+  the test case only at runtime, so Larastan at level max cannot see it and the call fails
+  the `static` gate. `pest-plugin-laravel` exposes a typed global for each one — `get()`,
+  `post()`, `actingAs()`, `assertAuthenticated()` — brought in with `use function` (M1.6)
 
 Every Action ships with three tests minimum: happy path, permission denied, tenant
 isolation. Anything touching comments adds a fourth — the **internal-comment leak test**,

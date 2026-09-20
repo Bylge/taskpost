@@ -233,6 +233,35 @@ returns in the same commit as the first test that belongs in it (`07-conventions
 was found by deleting the directory locally and running the suite the way a fresh clone sees
 it, which is the only way it surfaces before CI does.
 
+**M1.6 passed on 2026-09-20.** `composer check` exits 0 from a clean tree and leaves it
+clean — Pint 1.32.1, Larastan 3.12.2 on PHPStan 2.2.14, then the Pest suite. All three were
+also proved to go **red**: a deleted `declare(strict_types=1)` fails Pint, `return 42;` from a
+`: string` method fails Larastan with `return.type`, and a flipped assertion fails Pest, each
+exiting 1 and each reverted. A gate that cannot fail is worse than no gate — the same
+argument `08-environment.md` makes about the `i18n` job.
+
+**Level max over the whole skeleton cost two fixes, not a baseline.** Analysing `app`,
+`config`, `database`, `routes` and `tests` produced exactly three errors, and both underlying
+causes were real:
+
+- `config/filesystems.php` passed `env('APP_URL')` straight into `rtrim()`. `env()` can
+  return a bool — `Env` casts `true`, `(false)`, `null` and `empty` — and the
+  `declare(strict_types=1)` Pint had just added turns what used to be a silent coercion into
+  a `TypeError`. The gate caught a crash path this same step had created.
+- `$this->get('/up')` inside a Pest closure is invisible to static analysis, because `$this`
+  is bound to the test case only at runtime. `pest-plugin-laravel` exposes a typed global for
+  each of these, so the fix is `Pest\Laravel\get()`. Recorded in `07-conventions.md`, because
+  every test from M2 onward meets it.
+
+**Larastan boots the real application.** A runtime error inside a provider's `boot()` does not
+come back as an analysis error — it aborts PHPStan with *Application bootstrap failed* and a
+stack trace. Worth knowing before it is mistaken for a broken tool, and worth having: the
+`static` job therefore also catches anything that stops the application booting at all.
+
+Pint reformatted 24 files, and neither tool leaves anything behind — no cache file, no `tmp/`
+directory in the repository — which is what makes the "leaves it clean" half of the check
+pass rather than merely the "exits 0" half.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
