@@ -3,7 +3,32 @@
 .env.*
 !.env.example
 
-# OS noise
+# Build output and installed dependencies
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/public/fonts-manifest.dev.json
+
+# Runtime and test artefacts
+*.log
+/storage/*.key
+/storage/pail
+.phpunit.result.cache
+/.phpunit.cache
+
+# Composer credentials — a real secret, not noise
+/auth.json
+
+# Editor and OS noise
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.vscode
+/.zed
+.phpactor.json
 Thumbs.db
 .DS_Store
 

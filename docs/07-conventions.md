@@ -106,7 +106,11 @@ since M1 (`08-environment.md`).
 
 The four mandatory categories are in `03-architecture.md`. These are the mechanics:
 
-- **Feature tests by default.** `tests/Unit` only for pure logic that touches no database
+- **Feature tests by default.** `tests/Unit` only for pure logic that touches no database —
+  and it does not exist yet. Git does not track an empty directory, and a `<testsuite>`
+  pointing at a directory PHPUnit cannot find aborts the whole run on a fresh clone, so the
+  `Unit` suite is added to `phpunit.xml` in the same commit as the first test that needs it
+  (`06-build-plan.md` M1.5)
 - **Never mock the database, never mock an Action inside a feature test.** The thing being
   proven is that the real pieces fit together
 - **Every model gets a factory**, and making a second tenant with overlapping data is one

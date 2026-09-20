@@ -21,6 +21,9 @@ services:
       # the entrypoint detects it and refuses to boot with exit code 1, pointing
       # at docker-library/postgres#1259. Verified at M1.4 rather than assumed.
       - pgdata:/var/lib/postgresql
+      # Creates the test-suite database on a fresh volume. The entrypoint runs these files
+      # only when the data directory is empty, so this is a no-op for an existing volume.
+      - ./docker/initdb.d:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U taskpost -d taskpost']
       interval: 5s
