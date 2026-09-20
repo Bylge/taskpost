@@ -366,6 +366,31 @@ need the optional `fontaine` package. Adding a dependency to improve layout shif
 page that M3 deletes fails the razor, and `optimizedFallbacks: false` would edit a config file
 this step scoped out. Left as it is, to be decided at M3, when fonts first matter to anybody.
 
+**M1.9 passed on 2026-09-20.** The resolved versions are recorded above and checked by
+`tests/Unit/RecordedVersionsTest.php`, which runs inside `composer check` and will run inside
+M1.10's `test` job with no extra wiring. Three red paths were proved rather than reasoned
+about: a drifted version fails with the package named beside its real version, a package
+recorded but not installed fails as `(absent)`, and removing a marker fails with a
+`RuntimeException` naming the file. Each was reverted.
+
+**The `Unit` suite is back in `phpunit.xml`**, which M1.6 said would happen in the same commit
+as the first test that belongs in it. This is that test — it reads files and touches no
+database, which is exactly what `07-conventions.md` reserves `tests/Unit` for.
+
+**Issue #6 closes here.** `composer.json` required `php: ^8.3`, inherited from the skeleton,
+while both `CLAUDE.md` and this file had decided 8.5. `composer update --lock` raised the
+platform requirement and moved nothing: 163 packages before, 163 after, every version
+identical. The decision is now enforced by Composer instead of held by convention, and the
+test asserts the running interpreter falls inside the constraint rather than merely that the
+constraint exists.
+
+**A record is only as good as what it covers, and covering everything is how records die.**
+The table lists the stack-defining packages, not all 163 in the lockfiles — recording a
+transitive dependency nobody chose would turn every routine `composer update` into a
+documentation edit, and a document that must be edited for changes nobody made is a document
+that stops being edited. What is in: everything the dependency floor names, plus the tools
+`composer check` runs.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
