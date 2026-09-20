@@ -43,7 +43,10 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // env() may return a bool — Env casts values like "true" and "(false)" — and
+            // declare(strict_types=1) turns what used to be a silent coercion into a
+            // TypeError. The cast states what this variable has to be for rtrim to work.
+            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
