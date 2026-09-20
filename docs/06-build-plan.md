@@ -262,6 +262,38 @@ Pint reformatted 24 files, and neither tool leaves anything behind — no cache 
 directory in the repository — which is what makes the "leaves it clean" half of the check
 pass rather than merely the "exits 0" half.
 
+**M1.7 passed on 2026-09-20.** `filament/filament` v5.8.2 sits in `require`, `artisan about`
+exits 0 and reports Filament v5.8.2 beside Livewire v4.4.5, and `composer check` is still
+green with Filament in the tree. No panel, no provider, no resource — `filament:install` was
+never run.
+
+**Nothing was published into the repository.** The install changed `composer.json` and
+`composer.lock` and touched nothing else: no `config/filament.php`, no
+`app/Providers/Filament/`, no `public/js/filament`. That is hard rule 6 holding at its
+cheapest — today, evicting Filament costs two lines in a manifest.
+
+**Livewire 4 arrived transitively, as this milestone predicted.** `filament/support` requires
+`livewire/livewire ^4.1` and v4.4.5 resolved. It is not a direct requirement of this project
+and should not be made one; the two move together.
+
+**Filament 5 hard-requires 2FA libraries.** `pragmarx/google2fa` 9.1.0,
+`pragmarx/google2fa-qrcode` 4.0.0 and `chillerlan/php-qrcode` 5.0.5 are in the lock file now,
+pulled in by `filament/filament` itself rather than chosen here. 2FA stays on the unscheduled
+list and nothing enables it: plan rule 4 governs features entering the MVP, not a
+dependency's dependencies, so this is recorded rather than decided. The practical consequence
+is only that the library is already present on the day 2FA stops being unscheduled.
+
+**Larastan boots Filament too**, so the `static` gate passing after this install is not a
+formality. Larastan bootstraps the real application, which means every Filament service
+provider boots during analysis; a package that could not boot without a panel would have
+turned the gate red here rather than at M3.
+
+Production packages went from 76 to 109. The other thirty-odd are what Filament builds on —
+`blade-ui-kit/blade-icons`, `kirschbaum-development/eloquent-power-joins`, `spatie/invade`,
+`symfony/html-sanitizer` and the rest. **Found work, filed rather than fixed:** `composer.json`
+still declares `php: ^8.3` from the skeleton while this project has decided on 8.5, which is
+issue #6 against M1.9.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
