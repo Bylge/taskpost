@@ -198,6 +198,41 @@ so this trap costs an error message rather than a database.
 **PostgreSQL is published on 55432, not 5432** — see `08-environment.md`, which owns the
 reason.
 
+**M1.5 passed on 2026-09-20.** Laravel 13.32.0 on PHP 8.5.10, from `laravel/laravel`
+v13.10.1, migrating against the Compose PostgreSQL — nine tables from the skeleton's three
+migrations. Pest 5.2.1 with `pest-plugin-laravel` 5.0.1 runs three tests green, and `/up`
+answers 200 over real HTTP rather than only through the test client.
+
+**The skeleton ships an agent trap.** Laravel 13 now includes its own `CLAUDE.md` and
+`AGENTS.md`, both Laravel Boost bootstrap instructions telling an agent to
+`composer require laravel/boost`. Copied in blindly, the first would have overwritten this
+project's `CLAUDE.md` and the second would have added a competing instruction file. Neither
+was taken. The install was done by generating the skeleton elsewhere and copying it in with
+those two and the three other colliding root files held back — `create-project` refuses a
+non-empty directory anyway, and this repository was not empty.
+
+**Pest 5 displaces the skeleton's PHPUnit.** `pestphp/pest` 5.2.1 requires
+`phpunit/phpunit` ^13.3.4 while the skeleton pins ^12.5.12 directly, so the direct
+requirement was removed rather than argued with. PHPUnit 13.3.4 is installed transitively,
+underneath Pest, which is where it belongs.
+
+**SQLite lived in six places, not one:** `.env.example`; a `post-create-project-cmd` line in
+`composer.json` touching `database/database.sqlite`; both the `sqlite` connection and the
+`'default'` fallback in `config/database.php`; two more fallbacks in `config/queue.php`;
+`database/.gitignore`, whose only line was `*.sqlite*`, so the file went entirely; and
+`phpunit.xml`. All six are gone, and the word now survives outside `docs/` only in prose
+explaining why it is refused. The `mysql`, `mariadb` and `sqlsrv` connections were left
+alone — SQLite was removed because it is the specific shortcut that would make a green suite
+meaningless (`08-environment.md`), not merely because it is unused.
+
+**An empty `tests/Unit` would have turned CI red at M1.10.** Git does not track an empty
+directory, so on a fresh clone PHPUnit cannot find the directory its `Unit` testsuite names
+and aborts the whole run — `Test directory ".../tests/Unit" not found` — before one test
+executes. The suite entry was removed rather than propped up with a placeholder file, and it
+returns in the same commit as the first test that belongs in it (`07-conventions.md`). This
+was found by deleting the directory locally and running the suite the way a fresh clone sees
+it, which is the only way it surfaces before CI does.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,

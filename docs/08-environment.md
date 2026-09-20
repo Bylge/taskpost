@@ -50,6 +50,20 @@ services bind to loopback only — nothing here is reachable from the LAN.
 
 Mailpit is on the defaults, `1025` for SMTP and `8025` for the web interface.
 
+**The test suite has a database of its own — `taskpost_testing`** (M1.5). `phpunit.xml`
+names it, so running Pest never drops the development data sitting beside it, and the same
+file pins `DB_CONNECTION=pgsql` so the suite cannot quietly fall back to SQLite. A fresh
+volume creates the database automatically: `docker/initdb.d/` is mounted into the container's
+entrypoint directory, and the entrypoint runs those files **only when the data directory is
+empty**. An existing volume never re-runs them — which is why, on the machine whose volume
+predates M1.5, the database was created by hand exactly once:
+
+```sh
+docker compose exec -T postgres createdb -U taskpost taskpost_testing
+```
+
+CI never hits this: its service container starts empty every run.
+
 **No cache or queue container until M8** — decided 2026-09-08. `CACHE_STORE=database` and
 `QUEUE_CONNECTION=database` until something actually dispatches a job or reads a cache,
 which is M8; the razor applied to infrastructure. When M8 needs one it is **Valkey**, not

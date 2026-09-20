@@ -6,11 +6,12 @@ numbers and a whiteboard. Aimed at firms of up to about thirty people, where Sla
 Teams are more product than the problem needs. Everything lives in a tenant, everyone works in
 one workspace, and what a person may see and what they may do are kept as separate questions.
 
-**Status: planning. There is no application code in this repository yet** — nothing is
-installed, scaffolded or runnable. What exists is the design, and it is deliberately being
-finished before the first line of PHP.
+**Status: early construction — milestone M1, the walking skeleton.** A Laravel application
+is installed and runs against PostgreSQL, with the test suite and the quality gate going up
+around it. There is no product behaviour yet: no tenants, no tasks, no screens. The design in
+`docs/` was deliberately finished before the first line of PHP, and it stays ahead of the code.
 
-## Intended stack
+## Stack
 
 Laravel 13 · PHP 8.5 · Livewire 4 · Filament 5 · Blade · Tailwind · PostgreSQL · Pest 5
 
