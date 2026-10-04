@@ -110,6 +110,13 @@ would fail on day one. M1 proves the job's *red* path with a throwaway unpaired 
 parity check over zero locale directories is a green that cannot go red, which is worse than
 no job at all.
 
+**Three of the four are live as of M1.10**, defined in `.github/workflows/ci.yml` and running
+on `ubuntu-24.04` with PHP 8.5 from `shivammathur/setup-php`. The `test` job gets its
+PostgreSQL from a `postgres:18` service container whose `POSTGRES_DB` is `taskpost_testing`,
+so CI needs no `createdb` step and no `docker/initdb.d`. It keeps the canonical **5432** while
+local stays on 55432, carried entirely by job-level `DB_PORT`. No npm step: nothing in the
+suite renders a `@vite` view yet.
+
 **Main is branch-protected: all four jobs green, or no merge.** **There is no reviewer — one
 person works on this — so branch protection is the entire review process**, which is exactly
 why it does not get bypassed for a small change. Enforced with a repository **ruleset**,
