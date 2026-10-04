@@ -1,0 +1,102 @@
+# The gate, enforced. `composer check` runs these same three tools locally and in the same
+# order (07-conventions.md); CI runs them as separate jobs so a failure names itself without
+# anyone reading a log. The fourth job, i18n, arrives at M1.11.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Nothing here writes to the repository and no job holds a secret, so the token that would
+# let a compromised dependency push a commit is withheld rather than trusted.
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, intl, fileinfo
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - run: vendor/bin/pint --test
+
+  static:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, intl, fileinfo
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      # Larastan bootstraps the real application, so every service provider boots during
+      # analysis and the app needs a key like any other run (06-build-plan.md M1.6).
+      - run: cp .env.example .env
+
+      - run: php artisan key:generate
+
+      - run: vendor/bin/phpstan analyse --no-progress
+
+  test:
+    runs-on: ubuntu-24.04
+
+    # The suite runs against PostgreSQL, never SQLite, on the same major as local Compose
+    # (08-environment.md). The container starts empty every run, so the database the suite
+    # uses is simply the one it is created with — no initdb script needed here.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: taskpost_testing
+          POSTGRES_USER: taskpost
+          POSTGRES_PASSWORD: taskpost
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taskpost -d taskpost_testing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # CI keeps the canonical 5432; only local is displaced to 55432, and nothing hardcodes
+    # either (08-environment.md). These win over the copied .env because Laravel's Dotenv is
+    # immutable and never overwrites a variable the process already has.
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: taskpost
+      DB_PASSWORD: taskpost
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, intl, fileinfo
+          coverage: none
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - run: cp .env.example .env
+
+      - run: php artisan key:generate
+
+      # DB_CONNECTION and DB_DATABASE come from phpunit.xml, which is also what stops the
+      # suite falling back to SQLite.
+      - run: vendor/bin/pest
