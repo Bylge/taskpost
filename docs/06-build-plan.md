@@ -167,6 +167,8 @@ branches are in flight is needless friction.
 build red *and* leaves the pull request unmergeable. No live-URL clause, because nothing is
 deployed.
 
+**Met on 2026-10-04** at M1.12 — the proof is in that step's note below.
+
 ### Steps — agreed 2026-09-08, re-based on the `taskpost` repository 2026-09-18
 
 | Step | Does | Check |
@@ -461,6 +463,39 @@ will look.
 **What this does not settle.** The pull request reaching `BLOCKED` on a red check, and
 `CLEAN` again after the revert, is a glimpse of M1.12's property rather than a substitute for
 it — M1.12 is its own step and runs on its own terms.
+
+**M1.12 passed on 2026-10-04, and with it M1's exit criterion.** A test asserting
+`expect('red')->toBe('green')` was pushed to pull request #13. `test` concluded `failure`
+while `lint`, `static` and `i18n` stayed green, the pull request moved to `BLOCKED`, and an
+actual merge attempt was refused:
+
+```
+X Pull request Bylge/taskpost#13 is not mergeable: the base branch policy prohibits the merge.
+```
+
+`main` was untouched by the attempt. Removing the test in the next commit returned all four
+jobs to `success` and the pull request to `CLEAN`, with the tree then diffing empty against
+`main`. Both halves run rather than reasoned about.
+
+**The merge was attempted rather than inferred**, because `mergeStateStatus: BLOCKED` is a
+field and a refused merge is the behaviour the milestone cares about — they are not the same
+claim. What was **not** attempted is `gh pr merge --admin`, which `gh` helpfully offers. The
+ruleset reports `bypass_actors: []` and `current_user_can_bypass: "never"`, and GitHub
+computes that field from the bypass list itself, so the remaining doubt is small while the
+cost of being wrong is a red `main`. That half is recorded as verified-by-metadata rather than
+verified-by-attempt, because the difference is the kind that gets glossed.
+
+**M1 is complete.** Twelve steps worked in order, plus one unplanned fix (#11) when a Windows
+dynamic-range reservation took 55432 away mid-milestone. What exists now: a Laravel 13
+skeleton on PostgreSQL with Pest 5, a gate of Pint and Larastan at level max with no baseline,
+Filament installed but uninstantiated, an asset build, a version record that checks itself,
+and four CI jobs that genuinely block a merge. What does not exist is any product behaviour at
+all — which is the correct state for a walking skeleton, and the point of building one.
+
+**Next is M2 — tenancy and identity.** Phase 1 is not finished: `01-principles.md` §2 holds
+that nothing in Phase 2 starts until all four foundations are in, and two of them — tenancy
+and the permission layer — have not been begun. M2's step list is proposed and agreed before
+its first file, as every milestone's is.
 
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
