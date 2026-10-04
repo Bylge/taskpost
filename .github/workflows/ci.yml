@@ -73,7 +73,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
-    # CI keeps the canonical 5432; only local is displaced to 55432, and nothing hardcodes
+    # CI keeps the canonical 5432; only local is displaced to 15432, and nothing hardcodes
     # either (08-environment.md). These win over the copied .env because Laravel's Dotenv is
     # immutable and never overwrites a variable the process already has.
     env:

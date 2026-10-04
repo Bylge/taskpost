@@ -39,14 +39,31 @@ in full** against the new remote, not assumed to carry over (`06-build-plan.md`)
 **Compose runs backing services only** — `postgres` and `mailpit`. PHP, Artisan, the queue
 worker and Vite run natively in WSL2.
 
-**PostgreSQL is published on `127.0.0.1:55432`, not 5432** — decided 2026-09-18 at M1.4. A
-native Windows PostgreSQL service listens on `0.0.0.0:5432`, and Docker Desktop forwards
-published ports through Windows, so the canonical port cannot be bound from Compose at all;
-`up` fails outright rather than degrading. The alternative was stopping that Windows service,
-which was rejected because it belongs to the machine rather than to this project. `DB_PORT`
-carries the difference from M1.5, which is exactly what "configuration comes from the
-environment" is for: **CI is unaffected and keeps 5432**, because nothing hardcodes it. Both
-services bind to loopback only — nothing here is reachable from the LAN.
+**PostgreSQL is published on `127.0.0.1:15432`** — 5432 originally, 55432 from 2026-09-18 at
+M1.4, and this from 2026-10-04. Two separate hazards sit above it, and the port had to clear
+both.
+
+The first: a native Windows PostgreSQL service listens on `0.0.0.0:5432`, and Docker Desktop
+forwards published ports through Windows, so the canonical port cannot be bound from Compose
+at all. Stopping that service was rejected because it belongs to the machine rather than to
+this project.
+
+The second only appeared later. **Everything above 49152 is the Windows dynamic range, where
+Hyper-V reserves blocks afresh at every boot** — and on 2026-10-04 one of them, 55368–55467,
+swallowed 55432. Compose failed with `ports are not available ... /forwards/expose returned
+unexpected status: 500` while nothing was actually listening on the port, which is a
+confusing way to be told it is spoken for. `netsh.exe interface ipv4 show excludedportrange
+protocol=tcp` lists the live reservations and is the first thing to run if `up` ever fails
+this way again.
+
+**The lesson is the range, not the number.** A published port below 49152 clears both
+hazards at once: Hyper-V cannot reserve it, and the machine's own PostgreSQL is not on it.
+That is why the replacement is 15432 rather than another five-digit port, and why picking one
+in the dynamic range would only have bought time.
+
+`DB_PORT` carries the difference from M1.5, which is exactly what "configuration comes from
+the environment" is for: **CI is unaffected and keeps 5432**, because nothing hardcodes it.
+Both services bind to loopback only — nothing here is reachable from the LAN.
 
 Mailpit is on the defaults, `1025` for SMTP and `8025` for the web interface.
 
@@ -114,7 +131,7 @@ no job at all.
 on `ubuntu-24.04` with PHP 8.5 from `shivammathur/setup-php`. The `test` job gets its
 PostgreSQL from a `postgres:18` service container whose `POSTGRES_DB` is `taskpost_testing`,
 so CI needs no `createdb` step and no `docker/initdb.d`. It keeps the canonical **5432** while
-local stays on 55432, carried entirely by job-level `DB_PORT`. No npm step: nothing in the
+local stays on 15432, carried entirely by job-level `DB_PORT`. No npm step: nothing in the
 suite renders a `@vite` view yet.
 
 **Main is branch-protected: all four jobs green, or no merge.** **There is no reviewer — one
