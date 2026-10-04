@@ -391,6 +391,40 @@ documentation edit, and a document that must be edited for changes nobody made i
 that stops being edited. What is in: everything the dependency floor names, plus the tools
 `composer check` runs.
 
+**M1.10 passed on 2026-10-04.** `lint`, `static` and `test` concluded `success` on pull
+request #10 at first run — 16s, 21s and 39s — and ruleset `23670561` now lists all three as
+required, with `strict_required_status_checks_policy: true`. `bypass_actors` is still empty,
+`current_user_can_bypass` is still `never`, and squash is still the only merge method: adding
+the checks changed nothing else about the ruleset.
+
+**The ordering this milestone argued for turned out to matter.** The contexts were added only
+*after* the jobs had reported, because a ruleset demanding a check no workflow produces leaves
+every pull request permanently unmergeable. PR #10 stayed `MERGEABLE` / `CLEAN` across the
+change, which is evidence the order was right rather than merely cautious.
+
+**CI proved the port decision rather than inheriting it.** The `test` job sets `DB_HOST`,
+`DB_PORT`, `DB_USERNAME` and `DB_PASSWORD` as job-level environment *and* copies
+`.env.example`, which carries the local `DB_PORT=55432`. Laravel's Dotenv is immutable and
+never overwrites a variable the process already holds, so the job values win — and the proof
+is that `it migrates into a database of its own`, which asserts the database it is connected
+to, passes in CI. Had the override not worked the suite could not have connected at all.
+
+**No `createdb` step and no npm step.** The service container starts empty every run, so the
+suite's database is simply the one `POSTGRES_DB` creates; `docker/initdb.d` exists for local
+volumes, which CI does not have. And no test renders a `@vite` view, so the asset build —
+which reaches `fonts.bunny.net` over the network (M1.8) — stays out of CI until something
+needs it. Both are the razor applied to a pipeline rather than to a feature.
+
+**Actions are pinned to major tags, not commit SHAs** — `actions/checkout@v7` and
+`shivammathur/setup-php@v2`, resolving to v7.0.1 and 2.37.2. The repository does not require
+SHA pinning. The argument for tags here is that no job holds a secret and
+`permissions: contents: read` withholds the write token, while a SHA pin on a project with no
+Dependabot stops receiving security patches silently — a rotting pin is worse than a moving
+one. Recorded because it is the kind of decision that reads as an oversight later.
+
+There is **no dependency caching**, deliberately, while a full `composer install` costs under
+half a minute. The trigger to add it is a job that becomes slow enough to discourage pushing.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
