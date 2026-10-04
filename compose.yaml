@@ -10,10 +10,13 @@ services:
       # is reachable from outside this machine; the port is bound to loopback below.
       POSTGRES_PASSWORD: taskpost
     ports:
-      # 55432, not 5432: a native Windows PostgreSQL service holds 5432 machine-wide,
-      # and Docker Desktop forwards through Windows, so the canonical port cannot be
-      # published here. Bound to loopback — nothing on the LAN reaches this.
-      - '127.0.0.1:55432:5432'
+      # 15432, and the digits matter twice over. Not 5432, because a native Windows
+      # PostgreSQL service holds it machine-wide when it runs and Docker Desktop forwards
+      # through Windows. Not 55432 either, which this was until 2026-10-04: anything above
+      # 49152 sits in the Windows dynamic range, where Hyper-V reserves blocks afresh at
+      # every boot, and one of them swallowed 55432. Below 49152 that cannot happen.
+      # Bound to loopback — nothing on the LAN reaches this.
+      - '127.0.0.1:15432:5432'
     volumes:
       # PostgreSQL 18 keeps its data in /var/lib/postgresql/18/docker, not the
       # pre-18 /var/lib/postgresql/data, and the image declares its VOLUME at the

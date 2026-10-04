@@ -241,8 +241,9 @@ boot, exiting 1 with an error pointing at `docker-library/postgres#1259`. That i
 recording precisely because the expectation going in was silent loss; the failure is loud,
 so this trap costs an error message rather than a database.
 
-**PostgreSQL is published on 55432, not 5432** — see `08-environment.md`, which owns the
-reason.
+**PostgreSQL is not published on 5432** — 55432 was chosen here at M1.4 and replaced by
+15432 on 2026-10-04, when a Windows dynamic-range reservation swallowed it. `08-environment.md`
+owns both the reason and the rule that came out of it: stay below 49152.
 
 **M1.5 passed on 2026-09-20.** Laravel 13.32.0 on PHP 8.5.10, from `laravel/laravel`
 v13.10.1, migrating against the Compose PostgreSQL — nine tables from the skeleton's three
@@ -404,7 +405,7 @@ change, which is evidence the order was right rather than merely cautious.
 
 **CI proved the port decision rather than inheriting it.** The `test` job sets `DB_HOST`,
 `DB_PORT`, `DB_USERNAME` and `DB_PASSWORD` as job-level environment *and* copies
-`.env.example`, which carries the local `DB_PORT=55432`. Laravel's Dotenv is immutable and
+`.env.example`, which carries the local `DB_PORT`. Laravel's Dotenv is immutable and
 never overwrites a variable the process already holds, so the job values win — and the proof
 is that `it migrates into a database of its own`, which asserts the database it is connected
 to, passes in CI. Had the override not worked the suite could not have connected at all.
