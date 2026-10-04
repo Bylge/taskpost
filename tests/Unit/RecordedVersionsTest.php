@@ -6,22 +6,6 @@ declare(strict_types=1);
 // silently, and the plan's own dependency floor was wrong within three months of being
 // written — so the record is parsed and compared rather than trusted (06-build-plan.md M1.9).
 
-function taskpostRoot(): string
-{
-    return dirname(__DIR__, 2);
-}
-
-function taskpostReadFile(string $path): string
-{
-    $contents = file_get_contents($path);
-
-    if ($contents === false) {
-        throw new RuntimeException("Unable to read {$path}");
-    }
-
-    return $contents;
-}
-
 /**
  * Every package version in composer.lock, production and dev alike.
  *
