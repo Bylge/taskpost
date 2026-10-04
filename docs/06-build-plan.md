@@ -426,6 +426,42 @@ one. Recorded because it is the kind of decision that reads as an oversight late
 There is **no dependency caching**, deliberately, while a full `composer install` costs under
 half a minute. The trigger to add it is a job that becomes slow enough to discourage pushing.
 
+**M1.11 passed on 2026-10-04.** Four jobs green on pull request #12, all four required in
+ruleset `23670561`, and the red path proved by pushing a real commit rather than describing
+one: `common.action.delete` added to `lang/en/common.php` and not to `lang/pl/common.php`
+turned `i18n` to `failure` naming that exact key, and the pull request moved to `BLOCKED`. It
+was reverted in the next commit, and the tree then diffed empty against the green commit
+before it.
+
+**The `test` job went red alongside it**, which is intended rather than a leak. The parity
+test lives in `tests/Unit`, so the full suite runs it too and `composer check` catches an
+unpaired key locally before anything is pushed. The dedicated job exists so the failure names
+itself in the checks list; running it twice is the cheap half of that.
+
+**`lang/` is seeded here, not scaffolded.** `08-environment.md` rules out a parity check over
+zero locale directories, so the check needs something real to compare. Three keys in
+`common.php` per locale, at the `file.context.item` depth `07-conventions.md` requires and
+named for the role rather than the copy. M4 fills in the rest; this is not M4 started early.
+
+**Parity is checked in both directions**, one step past what `07-conventions.md` mandates —
+it states only that a key in `en` missing from `pl` fails. The reverse is not redundant: an
+orphan in `pl` is usually a typo in a key that *also* left the real one untranslated, and it
+is in every case a string nothing can reach. The job `08-environment.md` names is "`en`/`pl`
+key parity", and parity goes both ways.
+
+**The `i18n` job is bare on purpose** — no service container, no `.env`, no `key:generate`.
+The parity test reads `lang/` off disk and never boots the application, verified by running it
+with `.env` moved aside rather than assumed.
+
+**A global helper declared in two test files is a fatal error.** `taskpostRoot()` and
+`taskpostReadFile()` moved from `tests/Unit/RecordedVersionsTest.php` into `tests/Pest.php`,
+which is where `07-conventions.md` puts shared helpers and where the third file to need them
+will look.
+
+**What this does not settle.** The pull request reaching `BLOCKED` on a red check, and
+`CLEAN` again after the revert, is a glimpse of M1.12's property rather than a substitute for
+it — M1.12 is its own step and runs on its own terms.
+
 **Why the required status checks arrive at M1.10 and M1.11 rather than M1.1.** A ruleset that
 requires a check no workflow produces leaves every pull request permanently unmergeable —
 M1.1 would wedge the milestone it opens. So M1.1 turns on the pull-request requirement alone,
