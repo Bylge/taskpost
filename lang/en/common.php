@@ -9,6 +9,7 @@ return [
     'action' => [
         'cancel' => 'Cancel',
         'confirm' => 'Confirm',
+        'delete' => 'Delete',
         'save' => 'Save',
     ],
 ];
